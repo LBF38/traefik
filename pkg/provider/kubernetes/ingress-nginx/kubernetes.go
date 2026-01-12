@@ -84,6 +84,7 @@ type Provider struct {
 
 	DefaultBackendService  string `description:"Service used to serve HTTP requests not matching any known server name (catch-all). Takes the form 'namespace/name'." json:"defaultBackendService,omitempty" toml:"defaultBackendService,omitempty" yaml:"defaultBackendService,omitempty" export:"true"`
 	DisableSvcExternalName bool   `description:"Disable support for Services of type ExternalName." json:"disableSvcExternalName,omitempty" toml:"disableSvcExternalName,omitempty" yaml:"disableSvcExternalName,omitempty" export:"true"`
+	EnableDefaultBuffering bool   `description:"Enable support for default buffering behaviour." json:"defaultBuffering,omitempty" toml:"defaultBuffering,omitempty" yaml:"defaultBuffering,omitempty" export:"false"`
 
 	defaultBackendServiceNamespace string
 	defaultBackendServiceName      string
@@ -797,7 +798,7 @@ func (p *Provider) applyMiddlewares(namespace, routerKey string, ingressConfig i
 
 	applyWhitelistSourceRangeConfiguration(routerKey, ingressConfig, rt, conf)
 
-	if err := applyBufferingConfiguration(routerKey, ingressConfig, rt, conf); err != nil {
+	if err := p.applyBufferingConfiguration(routerKey, ingressConfig, rt, conf); err != nil {
 		return fmt.Errorf("applying buffering: %w", err)
 	}
 
@@ -1016,9 +1017,13 @@ func applyWhitelistSourceRangeConfiguration(routerName string, ingressConfig ing
 	rt.Middlewares = append(rt.Middlewares, whitelistSourceRangeMiddlewareName)
 }
 
-func applyBufferingConfiguration(routerName string, ingressConfig ingressConfig, rt *dynamic.Router, conf *dynamic.Configuration) error {
+func (p *Provider) applyBufferingConfiguration(routerName string, ingressConfig ingressConfig, rt *dynamic.Router, conf *dynamic.Configuration) error {
 	bodyMaxRequestSize := ptr.Deref(ingressConfig.BodyMaxRequestSize, "")
 	bodyMaxBufferSize := ptr.Deref(ingressConfig.BodyMaxBufferSize, "")
+
+	if p.EnableDefaultBuffering && bodyMaxRequestSize == "" && bodyMaxBufferSize == "" {
+		return nil
+	}
 
 	maxRequestBodySize := maxRequestBodyBytes
 	if bodyMaxRequestSize != "" {
