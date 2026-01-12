@@ -84,7 +84,7 @@ type Provider struct {
 
 	DefaultBackendService  string `description:"Service used to serve HTTP requests not matching any known server name (catch-all). Takes the form 'namespace/name'." json:"defaultBackendService,omitempty" toml:"defaultBackendService,omitempty" yaml:"defaultBackendService,omitempty" export:"true"`
 	DisableSvcExternalName bool   `description:"Disable support for Services of type ExternalName." json:"disableSvcExternalName,omitempty" toml:"disableSvcExternalName,omitempty" yaml:"disableSvcExternalName,omitempty" export:"true"`
-	EnableDefaultBuffering bool   `description:"Enable support for default buffering behaviour." json:"defaultBuffering,omitempty" toml:"defaultBuffering,omitempty" yaml:"defaultBuffering,omitempty" export:"false"`
+	EnableBuffering        bool   `description:"Enable support for default buffering behaviour." json:"enableBuffering,omitempty" toml:"defaultBuffering,omitempty" yaml:"defaultBuffering,omitempty" export:"true"`
 
 	defaultBackendServiceNamespace string
 	defaultBackendServiceName      string
@@ -1021,7 +1021,7 @@ func (p *Provider) applyBufferingConfiguration(routerName string, ingressConfig 
 	bodyMaxRequestSize := ptr.Deref(ingressConfig.BodyMaxRequestSize, "")
 	bodyMaxBufferSize := ptr.Deref(ingressConfig.BodyMaxBufferSize, "")
 
-	if p.EnableDefaultBuffering && bodyMaxRequestSize == "" && bodyMaxBufferSize == "" {
+	if !p.EnableBuffering && bodyMaxRequestSize == "" && bodyMaxBufferSize == "" {
 		return nil
 	}
 
