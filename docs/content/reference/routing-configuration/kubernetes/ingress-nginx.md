@@ -322,10 +322,10 @@ The following annotations are organized by category for easier navigation.
 
 ### Request Buffering
 
-| Annotation                                            | Limitations / Notes                                                                        |
-|-------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| <a id="opt-nginx-ingress-kubernetes-ioproxy-body-size" href="#opt-nginx-ingress-kubernetes-ioproxy-body-size" title="#opt-nginx-ingress-kubernetes-ioproxy-body-size">`nginx.ingress.kubernetes.io/proxy-body-size`</a> |                                                      |
-| <a id="opt-nginx-ingress-kubernetes-ioclient-body-buffer-size" href="#opt-nginx-ingress-kubernetes-ioclient-body-buffer-size" title="#opt-nginx-ingress-kubernetes-ioclient-body-buffer-size">`nginx.ingress.kubernetes.io/client-body-buffer-size`</a> |                                                      |
+| Annotation                                            | Limitations / Notes                                                                                                                    |
+|-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| <a id="opt-nginx-ingress-kubernetes-ioproxy-body-size" href="#opt-nginx-ingress-kubernetes-ioproxy-body-size" title="#opt-nginx-ingress-kubernetes-ioproxy-body-size">`nginx.ingress.kubernetes.io/proxy-body-size`</a> | If empty, you have to enable default buffering in the provider by setting `providers.kubernetesingressnginx.enableBuffering` to `true` |
+| <a id="opt-nginx-ingress-kubernetes-ioclient-body-buffer-size" href="#opt-nginx-ingress-kubernetes-ioclient-body-buffer-size" title="#opt-nginx-ingress-kubernetes-ioclient-body-buffer-size">`nginx.ingress.kubernetes.io/client-body-buffer-size`</a> |      If empty, you have to enable default buffering in the provider by setting `providers.kubernetesingressnginx.enableBuffering` to `true`                                                                                                                                  |
 
 
 ## Limitations

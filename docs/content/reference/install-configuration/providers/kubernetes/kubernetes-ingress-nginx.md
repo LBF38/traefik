@@ -59,6 +59,7 @@ providers:
     controllerClass: "k8s.io/ingress-nginx"
     watchIngressWithoutClass: false
     ingressClassByName: false
+    enableBuffering: true
 ```
 
 ```toml tab="File (TOML)"
@@ -73,6 +74,7 @@ providers:
   controllerClass = "k8s.io/ingress-nginx"
   watchIngressWithoutClass = false
   ingressClassByName = false
+  enableBuffering = true
 ```
 
 ```bash tab="CLI"
@@ -82,6 +84,7 @@ providers:
 --providers.kubernetesingressnginx.controllerclass=k8s.io/ingress-nginx
 --providers.kubernetesingressnginx.watchingresswithoutclass=false
 --providers.kubernetesingressnginx.ingressclassbyname=false
+--providers.kubernetesingressnginx.enablebuffering=true
 ```
 
 ```yaml tab="Helm Chart Values"
@@ -107,6 +110,8 @@ providers:
     watchIngressWithoutClass: false
     # -- Define if Ingress Controller should watch for Ingress Class by Name together with Controller Class
     ingressClassByName: false
+    # -- Define if Ingress Controller should enable default buffering behaviour when related annotations are empty
+    enableBuffering: true
 ```
 
 This provider watches for incoming Ingress events and automatically translates NGINX annotations into Traefik's dynamic configuration, creating the corresponding routers, services, middlewares, and other components needed to route traffic to your cluster services.
