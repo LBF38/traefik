@@ -44,6 +44,9 @@ const (
 
 	maxRequestBodyBytes = int64(1048576)
 	memRequestBodyBytes = int64(16 * 1024)
+
+	maxResponseBodyBytes = int64(1048576)
+	memResponseBodyBytes = int64(4 * 1024)
 )
 
 var nginxSizeRegexp = regexp.MustCompile(`^(?i)\s*([0-9]+)\s*([b|k|m|g]?)\s*$`)
@@ -84,7 +87,8 @@ type Provider struct {
 
 	DefaultBackendService  string `description:"Service used to serve HTTP requests not matching any known server name (catch-all). Takes the form 'namespace/name'." json:"defaultBackendService,omitempty" toml:"defaultBackendService,omitempty" yaml:"defaultBackendService,omitempty" export:"true"`
 	DisableSvcExternalName bool   `description:"Disable support for Services of type ExternalName." json:"disableSvcExternalName,omitempty" toml:"disableSvcExternalName,omitempty" yaml:"disableSvcExternalName,omitempty" export:"true"`
-	EnableBuffering        bool   `description:"Enable support for default buffering behaviour." json:"enableBuffering,omitempty" toml:"defaultBuffering,omitempty" yaml:"defaultBuffering,omitempty" export:"true"`
+	ProxyBuffering         bool   `description:"Enable support for response buffering." json:"proxyBuffering,omitempty" toml:"proxyBuffering,omitempty" yaml:"proxyBuffering,omitempty" export:"true"`
+	ProxyRequestBuffering  bool   `description:"Enable support for request buffering." json:"proxyRequestBuffering,omitempty" toml:"proxyRequestBuffering,omitempty" yaml:"proxyRequestBuffering,omitempty" export:"true"`
 
 	defaultBackendServiceNamespace string
 	defaultBackendServiceName      string
@@ -1020,8 +1024,10 @@ func applyWhitelistSourceRangeConfiguration(routerName string, ingressConfig ing
 func (p *Provider) applyBufferingConfiguration(routerName string, ingressConfig ingressConfig, rt *dynamic.Router, conf *dynamic.Configuration) error {
 	bodyMaxRequestSize := ptr.Deref(ingressConfig.BodyMaxRequestSize, "")
 	bodyMaxBufferSize := ptr.Deref(ingressConfig.BodyMaxBufferSize, "")
+	proxyRequestBufferingAnnotation := ptr.Deref(ingressConfig.ProxyRequestBuffering, "on")
 
-	if !p.EnableBuffering && bodyMaxRequestSize == "" && bodyMaxBufferSize == "" {
+	proxyRequestBuffering := p.ProxyRequestBuffering || proxyRequestBufferingAnnotation == "on"
+	if !proxyRequestBuffering && bodyMaxRequestSize == "" && bodyMaxBufferSize == "" {
 		return nil
 	}
 

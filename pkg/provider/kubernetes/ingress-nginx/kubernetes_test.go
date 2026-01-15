@@ -1386,7 +1386,7 @@ func TestLoadIngresses(t *testing.T) {
 				k8sClient:                      client,
 				defaultBackendServiceName:      test.defaultBackendServiceName,
 				defaultBackendServiceNamespace: test.defaultBackendServiceNamespace,
-				EnableBuffering:                test.enableBuffering,
+				ProxyBuffering:                 test.enableBuffering,
 			}
 			p.SetDefaults()
 

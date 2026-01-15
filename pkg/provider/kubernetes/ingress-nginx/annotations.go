@@ -55,8 +55,9 @@ type ingressConfig struct {
 	CustomHeaders *string `annotation:"nginx.ingress.kubernetes.io/custom-headers"`
 	UpstreamVhost *string `annotation:"nginx.ingress.kubernetes.io/upstream-vhost"`
 
-	BodyMaxBufferSize  *string `annotation:"nginx.ingress.kubernetes.io/client-body-buffer-size"`
-	BodyMaxRequestSize *string `annotation:"nginx.ingress.kubernetes.io/proxy-body-size"`
+	BodyMaxBufferSize     *string `annotation:"nginx.ingress.kubernetes.io/client-body-buffer-size"`
+	BodyMaxRequestSize    *string `annotation:"nginx.ingress.kubernetes.io/proxy-body-size"`
+	ProxyRequestBuffering *string `annotation:"nginx.ingress.kubernetes.io/proxy-request-buffering"`
 }
 
 // parseIngressConfig parses the annotations from an Ingress object into an ingressConfig struct.
