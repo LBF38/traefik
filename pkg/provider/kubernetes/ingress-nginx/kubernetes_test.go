@@ -1031,7 +1031,12 @@ func TestLoadIngresses(t *testing.T) {
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
 						"default-ingress-with-www-host-rule-0-path-0": {
-							Rule:        "Host(`www.host.localhost`) && PathPrefix(`/`)",
+							Rule:       "Host(`www.host.localhost`) && PathPrefix(`/`)",
+							RuleSyntax: "default",
+							Service:    "default-ingress-with-www-host-whoami-80",
+						},
+						"default-ingress-with-www-host-rule-0-path-0-from-to-www-redirect": {
+							Rule:        "Host(`host.localhost`)",
 							RuleSyntax:  "default",
 							Service:     "default-ingress-with-www-host-whoami-80",
 							Middlewares: []string{"default-ingress-with-www-host-rule-0-path-0-from-to-www-redirect"},
@@ -1039,9 +1044,10 @@ func TestLoadIngresses(t *testing.T) {
 					},
 					Middlewares: map[string]*dynamic.Middleware{
 						"default-ingress-with-www-host-rule-0-path-0-from-to-www-redirect": {
-							ReplacePathRegex: &dynamic.ReplacePathRegex{
-								Regex:       `www\.`,
-								Replacement: "",
+							RedirectRegex: &dynamic.RedirectRegex{
+								Regex:       `(https?)://[^/]+:([0-9]+)/(.*)`,
+								Replacement: "$1://www.host.localhost:$2/$3",
+								Permanent:   true,
 							},
 						},
 					},
@@ -1084,7 +1090,12 @@ func TestLoadIngresses(t *testing.T) {
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
 						"default-ingress-with-host-rule-0-path-0": {
-							Rule:        "Host(`host.localhost`) && PathPrefix(`/`)",
+							Rule:       "Host(`host.localhost`) && PathPrefix(`/`)",
+							RuleSyntax: "default",
+							Service:    "default-ingress-with-host-whoami-80",
+						},
+						"default-ingress-with-host-rule-0-path-0-from-to-www-redirect": {
+							Rule:        "Host(`www.host.localhost`)",
 							RuleSyntax:  "default",
 							Service:     "default-ingress-with-host-whoami-80",
 							Middlewares: []string{"default-ingress-with-host-rule-0-path-0-from-to-www-redirect"},
@@ -1092,9 +1103,10 @@ func TestLoadIngresses(t *testing.T) {
 					},
 					Middlewares: map[string]*dynamic.Middleware{
 						"default-ingress-with-host-rule-0-path-0-from-to-www-redirect": {
-							ReplacePathRegex: &dynamic.ReplacePathRegex{
-								Regex:       `www\.`,
-								Replacement: "",
+							RedirectRegex: &dynamic.RedirectRegex{
+								Regex:       `(https?)://[^/]+:([0-9]+)/(.*)`,
+								Replacement: "$1://host.localhost:$2/$3",
+								Permanent:   true,
 							},
 						},
 					},
@@ -1139,17 +1151,34 @@ func TestLoadIngresses(t *testing.T) {
 						"default-ingress-with-host-rule-0-path-0": {
 							Rule:       "Host(`host.localhost`) && PathPrefix(`/`)",
 							RuleSyntax: "default",
-							Service:    "default-ingress-with-host-whoami2-80",
+							Service:    "default-ingress-with-host-whoami-80",
 						},
 						"default-ingress-with-www-host-rule-0-path-0": {
 							Rule:       "Host(`www.host.localhost`) && PathPrefix(`/`)",
 							RuleSyntax: "default",
-							Service:    "default-ingress-with-host-whoami-80",
+							Service:    "default-ingress-with-www-host-whoami-80",
 						},
 					},
 					Middlewares: map[string]*dynamic.Middleware{},
 					Services: map[string]*dynamic.Service{
 						"default-ingress-with-host-whoami-80": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								Servers: []dynamic.Server{
+									{
+										URL: "http://10.10.0.1:80",
+									},
+									{
+										URL: "http://10.10.0.2:80",
+									},
+								},
+								Strategy:       "wrr",
+								PassHostHeader: ptr.To(true),
+								ResponseForwarding: &dynamic.ResponseForwarding{
+									FlushInterval: dynamic.DefaultFlushInterval,
+								},
+							},
+						},
+						"default-ingress-with-www-host-whoami-80": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
 								Servers: []dynamic.Server{
 									{
