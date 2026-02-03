@@ -60,6 +60,17 @@ type certBlocks struct {
 	Certificate *tls.Certificate
 }
 
+type hostConfiguration struct {
+	hostname string
+	routers  []*dynamic.Router
+	services []*dynamic.Service
+}
+
+type ingressWrapper struct {
+	Ingress           *netv1.Ingress
+	ParsedAnnotations ingressConfig
+}
+
 // Provider holds configurations of the provider.
 type Provider struct {
 	Endpoint         string              `description:"Kubernetes server endpoint (required for external cluster client)." json:"endpoint,omitempty" toml:"endpoint,omitempty" yaml:"endpoint,omitempty"`
@@ -266,22 +277,35 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 
 	ingresses := p.k8sClient.ListIngresses()
 
-	hosts := make(map[string]bool)
-	for _, ing := range ingresses {
-		if !p.shouldProcessIngress(ing, ingressClasses) {
+	// TODO: WIP
+
+	ingressesByHost := make(map[string][]ingressWrapper)
+	for _, ingress := range ingresses {
+		logger := log.Ctx(ctx).With().Str("ingress", ingress.Name).Str("namespace", ingress.Namespace).Logger()
+		// ctxIngress := logger.WithContext(ctx)
+
+		if !p.shouldProcessIngress(ingress, ingressClasses) {
 			continue
 		}
 
-		for _, rule := range ing.Spec.Rules {
-			if !hosts[rule.Host] {
-				hosts[rule.Host] = true
-			}
+		ingressConfig, err := parseIngressConfig(ingress)
+		if err != nil {
+			logger.Error().Err(err).Msg("Error parsing ingress configuration")
+			continue
+		}
+
+		for _, rule := range ingress.Spec.Rules {
+			ingressesByHost[rule.Host] = append([]ingressWrapper{}, ingressWrapper{
+				Ingress:           ingress,
+				ParsedAnnotations: ingressConfig,
+			})
 		}
 	}
 
 	uniqCerts := make(map[string]*tls.CertAndStores)
 	tlsOptions := make(map[string]tls.Options)
-	for _, ingress := range ingresses {
+	for host, ingWrapper := range ingressesByHost {
+		ingress := ingWrapper.Ingress
 		logger := log.Ctx(ctx).With().Str("ingress", ingress.Name).Str("namespace", ingress.Namespace).Logger()
 		ctxIngress := logger.WithContext(ctx)
 
@@ -353,7 +377,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 				Service:    defaultBackendName,
 			}
 
-			if err := p.applyMiddlewares(ingress.Namespace, defaultBackendName, "", "", hosts, ingressConfig, hasTLS, rt, conf); err != nil {
+			if err := p.applyMiddlewares(ingress.Namespace, defaultBackendName, "", "", ingressesByHost, ingressConfig, hasTLS, rt, conf); err != nil {
 				logger.Error().Err(err).Msg("Error applying middlewares")
 			}
 
@@ -371,7 +395,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 				rtTLS.TLS.Options = clientAuthTLSOptionName
 			}
 
-			if err := p.applyMiddlewares(ingress.Namespace, defaultBackendTLSName, "", "", hosts, ingressConfig, false, rtTLS, conf); err != nil {
+			if err := p.applyMiddlewares(ingress.Namespace, defaultBackendTLSName, "", "", ingressesByHost, ingressConfig, false, rtTLS, conf); err != nil {
 				logger.Error().Err(err).Msg("Error applying middlewares")
 			}
 
@@ -448,7 +472,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 					Service:    key,
 				}
 
-				if err := p.applyMiddlewares(ingress.Namespace, key, "", "", hosts, ingressConfig, hasTLS, rt, conf); err != nil {
+				if err := p.applyMiddlewares(ingress.Namespace, key, "", "", ingressesByHost, ingressConfig, hasTLS, rt, conf); err != nil {
 					logger.Error().Err(err).Msg("Error applying middlewares")
 				}
 
@@ -465,7 +489,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 					rtTLS.TLS.Options = clientAuthTLSOptionName
 				}
 
-				if err := p.applyMiddlewares(ingress.Namespace, key+"-tls", "", "", hosts, ingressConfig, false, rtTLS, conf); err != nil {
+				if err := p.applyMiddlewares(ingress.Namespace, key+"-tls", "", "", ingressesByHost, ingressConfig, false, rtTLS, conf); err != nil {
 					logger.Error().Err(err).Msg("Error applying middlewares")
 				}
 
@@ -534,7 +558,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 					conf.HTTP.ServersTransports[namedServersTransport.Name] = namedServersTransport.ServersTransport
 				}
 
-				if err := p.applyMiddlewares(ingress.Namespace, routerKey, pa.Path, rule.Host, hosts, ingressConfig, hasTLS, rt, conf); err != nil {
+				if err := p.applyMiddlewares(ingress.Namespace, routerKey, pa.Path, rule.Host, ingressesByHost, ingressConfig, hasTLS, rt, conf); err != nil {
 					logger.Error().Err(err).Msg("Error applying middlewares")
 				}
 			}
