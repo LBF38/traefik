@@ -31,6 +31,14 @@ type ingressConfig struct {
 	RewriteTarget *string `annotation:"nginx.ingress.kubernetes.io/rewrite-target"`
 	AppRoot       *string `annotation:"nginx.ingress.kubernetes.io/app-root"`
 
+	Canary                *bool   `annotation:"nginx.ingress.kubernetes.io/canary"`
+	CanaryWeight          *int    `annotation:"nginx.ingress.kubernetes.io/canary-weight"`
+	CanaryWeightTotal     *int    `annotation:"nginx.ingress.kubernetes.io/canary-weight-total"`
+	CanaryByHeader        *string `annotation:"nginx.ingress.kubernetes.io/canary-by-header"`
+	CanaryByHeaderValue   *string `annotation:"nginx.ingress.kubernetes.io/canary-by-header-value"`
+	CanaryByHeaderPattern *string `annotation:"nginx.ingress.kubernetes.io/canary-by-header-pattern"`
+	CanaryByCookie        *string `annotation:"nginx.ingress.kubernetes.io/canary-by-cookie"`
+
 	PermanentRedirect     *string `annotation:"nginx.ingress.kubernetes.io/permanent-redirect"`
 	PermanentRedirectCode *int    `annotation:"nginx.ingress.kubernetes.io/permanent-redirect-code"`
 	TemporalRedirect      *string `annotation:"nginx.ingress.kubernetes.io/temporal-redirect"`

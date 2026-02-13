@@ -4,6 +4,7 @@ import (
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/auth"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/authreq"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/authtls"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/canary"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/connection"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/cors"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/customheaders"
@@ -19,14 +20,133 @@ import (
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/ratelimit"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/redirect"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/rewrite"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/sessionaffinity"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/sslcipher"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/upstreamhashby"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/resolver"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 type Ingress struct {
 	*netv1.Ingress
-	ParsedAnnotations *ingressConfig
+	ParsedAnnotations      *ingressConfig
+	ParsedAnnotationsNGINX *ParsedAnnotationsNGINX
+}
+
+// Ingress defines the valid annotations present in one NGINX Ingress rule
+type ParsedAnnotationsNGINX struct {
+	BackendProtocol             string
+	Aliases                     []string
+	BasicDigestAuth             auth.Config
+	Canary                      canary.Config
+	CertificateAuth             authtls.Config
+	ClientBodyBufferSize        string
+	CustomHeaders               customheaders.Config
+	ConfigurationSnippet        string
+	Connection                  connection.Config
+	CorsConfig                  cors.Config
+	CustomHTTPErrors            []int
+	DisableProxyInterceptErrors bool
+	DefaultBackend              *corev1.Service
+	FastCGI                     fastcgi.Config
+	Denied                      *string
+	ExternalAuth                authreq.Config
+	EnableGlobalAuth            bool
+	HTTP2PushPreload            bool
+	Opentelemetry               opentelemetry.Config
+	Proxy                       proxy.Config
+	ProxySSL                    proxyssl.Config
+	RateLimit                   ratelimit.Config
+	Redirect                    redirect.Config
+	Rewrite                     rewrite.Config
+	Satisfy                     string
+	ServerSnippet               string
+	ServiceUpstream             bool
+	SessionAffinity             sessionaffinity.Config
+	SSLPassthrough              bool
+	UsePortInRedirects          bool
+	UpstreamHashBy              upstreamhashby.Config
+	LoadBalancing               string
+	UpstreamVhost               string
+	Denylist                    ipdenylist.SourceRange
+	XForwardedPrefix            string
+	SSLCipher                   sslcipher.Config
+	Logs                        log.Config
+	ModSecurity                 modsecurity.Config
+	Mirror                      mirror.Config
+	StreamSnippet               string
+	Allowlist                   ipallowlist.SourceRange
+}
+
+func toAnnotations(src *ingressConfig) *ParsedAnnotationsNGINX {
+	// TODO: finish mapping
+	return &ParsedAnnotationsNGINX{
+		BackendProtocol: "",
+		Aliases:         []string{},
+		BasicDigestAuth: auth.Config{
+			Type:       ptr.Deref(src.AuthType, ""),
+			Realm:      ptr.Deref(src.AuthRealm, ""),
+			Secret:     ptr.Deref(src.AuthSecret, ""),
+			SecretType: ptr.Deref(src.AuthSecretType, ""),
+		},
+		Canary: canary.Config{
+			Enabled:       ptr.Deref(src.Canary, false),
+			Weight:        ptr.Deref(src.CanaryWeight, 0),
+			WeightTotal:   ptr.Deref(src.CanaryWeightTotal, 100),
+			Header:        ptr.Deref(src.CanaryByHeader, ""),
+			HeaderValue:   ptr.Deref(src.CanaryByHeaderValue, ""),
+			HeaderPattern: ptr.Deref(src.CanaryByHeaderPattern, ""),
+			Cookie:        ptr.Deref(src.CanaryByCookie, ""),
+		},
+		CertificateAuth: authtls.Config{
+			AuthSSLCert:        resolver.AuthSSLCert{},
+			VerifyClient:       ptr.Deref(src.AuthTLSVerifyClient, ""),
+			ValidationDepth:    0,
+			ErrorPage:          "",
+			PassCertToUpstream: false,
+			MatchCN:            "",
+			AuthTLSError:       "",
+		},
+		ClientBodyBufferSize:        "",
+		CustomHeaders:               customheaders.Config{},
+		ConfigurationSnippet:        "",
+		Connection:                  connection.Config{},
+		CorsConfig:                  cors.Config{},
+		CustomHTTPErrors:            []int{},
+		DisableProxyInterceptErrors: false,
+		DefaultBackend:              &corev1.Service{},
+		FastCGI:                     fastcgi.Config{},
+		Denied:                      new(string),
+		ExternalAuth:                authreq.Config{},
+		EnableGlobalAuth:            false,
+		HTTP2PushPreload:            false,
+		Opentelemetry:               opentelemetry.Config{},
+		Proxy:                       proxy.Config{},
+		ProxySSL:                    proxyssl.Config{},
+		RateLimit:                   ratelimit.Config{},
+		Redirect:                    redirect.Config{},
+		Rewrite:                     rewrite.Config{},
+		Satisfy:                     "",
+		ServerSnippet:               "",
+		ServiceUpstream:             false,
+		SessionAffinity:             sessionaffinity.Config{},
+		SSLPassthrough:              false,
+		UsePortInRedirects:          false,
+		UpstreamHashBy:              upstreamhashby.Config{},
+		LoadBalancing:               "",
+		UpstreamVhost:               "",
+		Denylist:                    ipdenylist.SourceRange{},
+		XForwardedPrefix:            "",
+		SSLCipher:                   sslcipher.Config{},
+		Logs:                        log.Config{},
+		ModSecurity:                 modsecurity.Config{},
+		Mirror:                      mirror.Config{},
+		StreamSnippet:               "",
+		Allowlist:                   ipallowlist.SourceRange{},
+	}
 }
 
 // Server describes a website
