@@ -22,7 +22,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/apis/ingress"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/version"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 )
@@ -85,9 +84,6 @@ func NewController(pod, namespace, class string) *Controller {
 					"controller_namespace": namespace,
 					"controller_class":     class,
 					"controller_pod":       pod,
-					"release":              version.RELEASE,
-					"build":                version.COMMIT,
-					"repository":           version.REPO,
 				},
 			},
 			func() float64 { return 1 },
