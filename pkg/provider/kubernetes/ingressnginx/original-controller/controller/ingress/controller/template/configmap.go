@@ -29,12 +29,12 @@ import (
 	"github.com/mitchellh/hashstructure/v2"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/authreq"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/customheaders"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/parser"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/controller/config"
-	ing_net "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/net"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/util/runtime"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/authreq"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/customheaders"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/parser"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/controller/config"
+	ing_net "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/net"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 

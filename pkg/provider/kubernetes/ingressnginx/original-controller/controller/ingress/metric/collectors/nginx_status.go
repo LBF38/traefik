@@ -22,7 +22,7 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/nginx"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/nginx"
 	"k8s.io/klog/v2"
 )
 

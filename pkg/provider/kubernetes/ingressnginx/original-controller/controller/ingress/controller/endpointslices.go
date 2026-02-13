@@ -30,8 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/k8s"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/apis/ingress"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/k8s"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/apis/ingress"
 )
 
 // getEndpointsFromSlices returns a list of Endpoint structs for a given service/target port combination.

@@ -25,8 +25,8 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/mitchellh/hashstructure/v2"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/authreq"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/controller/config"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/authreq"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/controller/config"
 )
 
 func TestFilterErrors(t *testing.T) {

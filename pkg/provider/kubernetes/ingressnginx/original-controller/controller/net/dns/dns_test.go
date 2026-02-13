@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/util/file"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/util/file"
 )
 
 func TestGetDNSServers(t *testing.T) {

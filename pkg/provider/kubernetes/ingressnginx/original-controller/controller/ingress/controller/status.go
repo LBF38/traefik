@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/k8s"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/k8s"
 	"k8s.io/klog/v2"
 
 	apiv1 "k8s.io/api/core/v1"

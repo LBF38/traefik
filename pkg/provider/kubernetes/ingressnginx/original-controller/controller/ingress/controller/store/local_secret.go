@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/apis/ingress"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/apis/ingress"
 )
 
 // SSLCertTracker holds a store of referenced Secrets in Ingress rules

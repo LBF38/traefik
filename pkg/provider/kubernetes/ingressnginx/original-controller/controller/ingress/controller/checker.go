@@ -25,7 +25,7 @@ import (
 
 	"github.com/ncabatoff/process-exporter/proc"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/nginx"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/nginx"
 )
 
 // Name returns the healthcheck name

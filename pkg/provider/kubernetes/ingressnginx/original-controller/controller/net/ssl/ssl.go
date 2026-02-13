@@ -40,10 +40,10 @@ import (
 	"github.com/zakjan/cert-chain-resolver/certUtil"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/apis/ingress"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/apis/ingress"
 
-	ngx_config "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/controller/config"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/util/file"
+	ngx_config "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/controller/config"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/util/file"
 
 	klog "k8s.io/klog/v2"
 )

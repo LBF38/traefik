@@ -19,7 +19,7 @@ package e2e
 import (
 	"testing"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 )
 
 func init() {

@@ -17,7 +17,7 @@ limitations under the License.
 package resolver
 
 import (
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/defaults"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/defaults"
 	apiv1 "k8s.io/api/core/v1"
 )
 

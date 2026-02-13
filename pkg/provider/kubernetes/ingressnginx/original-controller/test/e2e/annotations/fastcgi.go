@@ -23,7 +23,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -17,7 +17,7 @@ limitations under the License.
 package ingress
 
 import (
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/util/sets"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/util/sets"
 )
 
 // Equal tests for equality between two Configuration types

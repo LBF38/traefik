@@ -19,8 +19,8 @@ package loadbalancing
 import (
 	networking "k8s.io/api/networking/v1"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/annotations/parser"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/resolver"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/parser"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/resolver"
 )
 
 // LB Algorithms are defined in https://github.com/kubernetes/ingress-nginx/blob/d3e75b056f77be54e01bdb18675f1bb46caece31/rootfs/etc/nginx/lua/balancer.lua#L28

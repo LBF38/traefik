@@ -23,7 +23,7 @@ import (
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/crd"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/gateway"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress"
-	ingressnginx "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx"
+	ingressnginx "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/knative"
 	"github.com/traefik/traefik/v3/pkg/provider/kv/consul"
 	"github.com/traefik/traefik/v3/pkg/provider/kv/etcd"

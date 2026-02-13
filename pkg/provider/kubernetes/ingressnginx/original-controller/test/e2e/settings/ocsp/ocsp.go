@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 )
 
 var _ = framework.DescribeSetting("OCSP", func() {
@@ -297,7 +297,7 @@ func ocspserveDeployment(namespace string) (*appsv1.Deployment, *corev1.Service)
 						Containers: []corev1.Container{
 							{
 								Name:  name,
-								Image: "registry.github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/cfssl:v1.2.7@sha256:1f0d8fca23a80dd6d592cee2f06cbadea46b613a879a022df0b5741f001d8baa",
+								Image: "registry.github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/cfssl:v1.2.7@sha256:1f0d8fca23a80dd6d592cee2f06cbadea46b613a879a022df0b5741f001d8baa",
 								Command: []string{
 									"/bin/bash",
 									"-c",

@@ -29,7 +29,7 @@ import (
 	pool "gopkg.in/go-playground/pool.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 )
 
 var _ = framework.IngressNginxDescribe("[Memory Leak] Dynamic Certificates", func() {

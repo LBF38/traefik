@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	ing_errors "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/errors"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/net"
+	ing_errors "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/errors"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/net"
 	networking "k8s.io/api/networking/v1"
 	machineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/klog/v2"

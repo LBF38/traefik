@@ -24,8 +24,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/klog/v2"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/controller/ingress/metric/collectors"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/pkg/apis/ingress"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/metric/collectors"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/pkg/apis/ingress"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 

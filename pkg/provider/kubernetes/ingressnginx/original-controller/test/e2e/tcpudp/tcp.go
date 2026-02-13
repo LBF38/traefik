@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 )
 
 var _ = framework.IngressNginxDescribe("[TCP] tcp-services", func() {
@@ -104,7 +104,7 @@ var _ = framework.IngressNginxDescribe("[TCP] tcp-services", func() {
 		}
 		f.EnsureService(externalService)
 
-		// Expose the `external name` port on the `ingress-nginx-controller` service
+		// Expose the `external name` port on the `ingressnginx-controller` service
 		svc := f.GetService(f.Namespace, "nginx-ingress-controller")
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:       "dns-svc",

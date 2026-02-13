@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller/test/e2e/framework"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/test/e2e/framework"
 )
 
 var _ = framework.DescribeSetting("configmap stream-snippet", func() {
@@ -54,7 +54,7 @@ var _ = framework.DescribeSetting("configmap stream-snippet", func() {
 			CoreV1().
 			Services(f.Namespace).
 			Get(context.TODO(), "nginx-ingress-controller", metav1.GetOptions{})
-		assert.Nil(ginkgo.GinkgoT(), err, "unexpected error obtaining ingress-nginx service")
+		assert.Nil(ginkgo.GinkgoT(), err, "unexpected error obtaining ingressnginx service")
 		assert.NotNil(ginkgo.GinkgoT(), svc, "expected a service but none returned")
 
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
