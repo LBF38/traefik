@@ -84,11 +84,12 @@ type Provider struct {
 	DisableSvcExternalName bool   `description:"Disable support for Services of type ExternalName." json:"disableSvcExternalName,omitempty" toml:"disableSvcExternalName,omitempty" yaml:"disableSvcExternalName,omitempty" export:"true"`
 
 	// FIXME
-	AllowSnippetAnnotations    bool   `description:"Allows Snippet Annotations." json:"allowSnippetAnnotations,omitempty" toml:"allowSnippetAnnotations,omitempty" yaml:"allowSnippetAnnotations,omitempty" export:"true"`
-	LoadBalancing              string `description:"Defines the load balancing strategy" json:"loadBalancing,omitempty" toml:"loadBalancing,omitempty" yaml:"loadBalancing,omitempty" export:"true"`
-	DisableServiceExternalName bool
-	ProxySSLLocationOnly       bool
-	EnableTopologyAwareRouting bool
+	AllowSnippetAnnotations          bool   `description:"Allows Snippet Annotations." json:"allowSnippetAnnotations,omitempty" toml:"allowSnippetAnnotations,omitempty" yaml:"allowSnippetAnnotations,omitempty" export:"true"`
+	LoadBalancing                    string `description:"Defines the load balancing strategy" json:"loadBalancing,omitempty" toml:"loadBalancing,omitempty" yaml:"loadBalancing,omitempty" export:"true"`
+	DisableServiceExternalName       bool
+	ProxySSLLocationOnly             bool
+	EnableTopologyAwareRouting       bool
+	EnableAccessLogForDefaultBackend bool
 
 	ProxyConnectTimeout int `description:"Amount of time to wait until a connection to a server can be established. Timeout value is unitless and in seconds." json:"proxyConnectTimeout,omitempty" toml:"proxyConnectTimeout,omitempty" yaml:"proxyConnectTimeout,omitempty" export:"true"`
 

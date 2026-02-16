@@ -7,9 +7,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/canary"
+	logCfg "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/log"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/proxy"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/defaults"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/k8s"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -305,6 +309,355 @@ func (p *Provider) serviceEndpoints(svcKey, backendPort string) ([]Endpoint, err
 	return upstreams, nil
 }
 
+// TODO: WIP
+func (p *Provider) GetDefaultBackend() defaults.Backend {
+	// TODO: FIXME
+	return defaults.Backend{}
+}
+
+// createServers builds a map of host name to Server structs from a map of
+// already computed Upstream structs. Each Server is configured with at least
+// one root location, which uses a default backend if left unspecified.
+func (p *Provider) createServers(data []*Ingress,
+	upstreams map[string]*Backend,
+	du *Backend,
+) map[string]*Server {
+	servers := make(map[string]*Server, len(data))
+	allAliases := make(map[string][]string, len(data))
+
+	bdef := p.GetDefaultBackend()
+	ngxProxy := proxy.Config{
+		BodySize:             bdef.ProxyBodySize,
+		ConnectTimeout:       bdef.ProxyConnectTimeout,
+		SendTimeout:          bdef.ProxySendTimeout,
+		ReadTimeout:          bdef.ProxyReadTimeout,
+		BuffersNumber:        bdef.ProxyBuffersNumber,
+		BufferSize:           bdef.ProxyBufferSize,
+		BusyBuffersSize:      bdef.ProxyBusyBuffersSize,
+		CookieDomain:         bdef.ProxyCookieDomain,
+		CookiePath:           bdef.ProxyCookiePath,
+		NextUpstream:         bdef.ProxyNextUpstream,
+		NextUpstreamTimeout:  bdef.ProxyNextUpstreamTimeout,
+		NextUpstreamTries:    bdef.ProxyNextUpstreamTries,
+		RequestBuffering:     bdef.ProxyRequestBuffering,
+		ProxyRedirectFrom:    bdef.ProxyRedirectFrom,
+		ProxyBuffering:       bdef.ProxyBuffering,
+		ProxyHTTPVersion:     bdef.ProxyHTTPVersion,
+		ProxyMaxTempFileSize: bdef.ProxyMaxTempFileSize,
+	}
+
+	// initialize default server and root location
+	pathTypePrefix := netv1.PathTypePrefix
+	servers[defServerName] = &Server{
+		Hostname: defServerName,
+		SSLCert:  p.getDefaultSSLCertificate(), // FIXME
+		Locations: []*Location{
+			{
+				Path:         rootLocation,
+				PathType:     &pathTypePrefix,
+				IsDefBackend: true,
+				Backend:      du.Name,
+				Proxy:        ngxProxy,
+				Service:      du.Service,
+				Logs: logCfg.Config{
+					Access:  p.EnableAccessLogForDefaultBackend,
+					Rewrite: false,
+				},
+			},
+		},
+	}
+
+	// initialize all other servers
+	for _, ing := range data {
+		ingKey := k8s.MetaNamespaceKey(ing)
+		anns := toAnnotations(ing.ParsedAnnotations)
+
+		if !p.AllowSnippetAnnotations {
+			dropSnippetDirectives(anns, ingKey)
+		}
+
+		// default upstream name
+		un := du.Name
+
+		if anns.Canary.Enabled {
+			log.Info().Msgf("Ingress %v is marked as Canary, ignoring", ingKey)
+			continue
+		}
+
+		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+			defUpstream := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
+
+			if backendUpstream, ok := upstreams[defUpstream]; ok {
+				// use backend specified in Ingress as the default backend for all its rules
+				un = backendUpstream.Name
+
+				defLoc := servers[defServerName].Locations[0]
+				if defLoc.IsDefBackend && len(ing.Spec.Rules) == 0 {
+					log.Info().Msgf("Ingress %q defines a backend but no rule. Using it to configure the catch-all server %q", ingKey, defServerName)
+
+					defLoc.IsDefBackend = false
+					// special "catch all" case, Ingress with a backend but no rule
+					defLoc.Backend = backendUpstream.Name
+					defLoc.Service = backendUpstream.Service
+					defLoc.Ingress = ing
+					// TODO: Redirect and rewrite can affect the catch all behavior, skip for now
+					originalRedirect := defLoc.Redirect
+					originalRewrite := defLoc.Rewrite
+					locationApplyAnnotations(defLoc, anns)
+					defLoc.Redirect = originalRedirect
+					defLoc.Rewrite = originalRewrite
+				} else {
+					log.Info().Msgf("Ingress %q defines both a backend and rules. Using its backend as default upstream for all its rules.", ingKey)
+				}
+			}
+		}
+
+		for _, rule := range ing.Spec.Rules {
+			host := rule.Host
+			if host == "" {
+				host = defServerName
+			}
+
+			if _, ok := servers[host]; ok {
+				// server already configured
+				continue
+			}
+
+			loc := &Location{
+				Path:         rootLocation,
+				PathType:     &pathTypePrefix,
+				IsDefBackend: true,
+				Backend:      un,
+				Ingress:      ing,
+				Service:      &corev1.Service{},
+			}
+			locationApplyAnnotations(loc, anns)
+
+			servers[host] = &Server{
+				Hostname: host,
+				Locations: []*Location{
+					loc,
+				},
+				SSLPassthrough:         anns.SSLPassthrough,
+				SSLCiphers:             anns.SSLCipher.SSLCiphers,
+				SSLPreferServerCiphers: anns.SSLCipher.SSLPreferServerCiphers,
+			}
+		}
+	}
+
+	// configure default location, alias, and SSL
+	for _, ing := range data {
+		ingKey := k8s.MetaNamespaceKey(ing)
+		anns := toAnnotations(ing.ParsedAnnotations)
+
+		if !p.AllowSnippetAnnotations {
+			dropSnippetDirectives(anns, ingKey)
+		}
+
+		if anns.Canary.Enabled {
+			log.Info().Msgf("Ingress %v is marked as Canary, ignoring", ingKey)
+			continue
+		}
+
+		for _, rule := range ing.Spec.Rules {
+			host := rule.Host
+			if host == "" {
+				host = defServerName
+			}
+
+			if len(servers[host].Aliases) == 0 {
+				servers[host].Aliases = anns.Aliases
+				if aliases := allAliases[host]; len(aliases) == 0 {
+					allAliases[host] = anns.Aliases
+				}
+			} else {
+				log.Warn().Msgf("Aliases already configured for server %q, skipping (Ingress %q)", host, ingKey)
+			}
+
+			if anns.ServerSnippet != "" {
+				if servers[host].ServerSnippet == "" {
+					servers[host].ServerSnippet = anns.ServerSnippet
+				} else {
+					log.Warn().Msgf("Server snippet already configured for server %q, skipping (Ingress %q)",
+						host, ingKey)
+				}
+			}
+
+			if !servers[host].SSLPassthrough && anns.SSLPassthrough {
+				servers[host].SSLPassthrough = true
+			}
+
+			// only add SSL ciphers if the server does not have them previously configured
+			if servers[host].SSLCiphers == "" && anns.SSLCipher.SSLCiphers != "" {
+				servers[host].SSLCiphers = anns.SSLCipher.SSLCiphers
+			}
+
+			// only add SSLPreferServerCiphers if the server does not have them previously configured
+			if servers[host].SSLPreferServerCiphers == "" && anns.SSLCipher.SSLPreferServerCiphers != "" {
+				servers[host].SSLPreferServerCiphers = anns.SSLCipher.SSLPreferServerCiphers
+			}
+
+			// only add a certificate if the server does not have one previously configured
+			if servers[host].SSLCert != nil {
+				continue
+			}
+
+			if len(ing.Spec.TLS) == 0 {
+				log.Info().Msgf("Ingress %q does not contains a TLS section.", ingKey)
+				continue
+			}
+
+			tlsSecretName := extractTLSSecretName(host, ing, p.GetLocalSSLCert)
+			if tlsSecretName == "" {
+				log.Info().Msgf("Host %q is listed in the TLS section but secretName is empty. Using default certificate", host)
+				// servers[host].SSLCert = n.getDefaultSSLCertificate() // FIXME
+				continue
+			}
+
+			secrKey := fmt.Sprintf("%v/%v", ing.Namespace, tlsSecretName)
+			cert, err := p.GetLocalSSLCert(secrKey)
+			if err != nil {
+				log.Warn().Msgf("Error getting SSL certificate %q: %v. Using default certificate", secrKey, err)
+				servers[host].SSLCert = p.getDefaultSSLCertificate()
+				continue
+			}
+
+			if cert.Certificate == nil {
+				log.Warn().Msgf("SSL certificate %q does not contain a valid SSL certificate for server %q", secrKey, host)
+				log.Warn().Msgf("Using default certificate")
+				servers[host].SSLCert = p.getDefaultSSLCertificate()
+				continue
+			}
+
+			err = cert.Certificate.VerifyHostname(host)
+			if err != nil {
+				log.Warn().Msgf("Unexpected error validating SSL certificate %q for server %q: %v", secrKey, host, err)
+				log.Warn().Msgf("Validating certificate against DNS names. This will be deprecated in a future version")
+				// check the Common Name field
+				// https://github.com/golang/go/issues/22922
+				err := verifyHostname(host, cert.Certificate)
+				if err != nil {
+					log.Warn().Msgf("SSL certificate %q does not contain a Common Name or Subject Alternative Name for server %q: %v", secrKey, host, err)
+					log.Warn().Msgf("Using default certificate")
+					servers[host].SSLCert = p.getDefaultSSLCertificate()
+					continue
+				}
+			}
+
+			servers[host].SSLCert = cert
+
+			now := time.Now()
+			if cert.ExpireTime.Before(now) {
+				log.Warn().Msgf("SSL certificate for server %q expired (%v)", host, cert.ExpireTime)
+			} else if cert.ExpireTime.Before(now.Add(240 * time.Hour)) {
+				log.Warn().Msgf("SSL certificate for server %q is about to expire (%v)", host, cert.ExpireTime)
+			}
+		}
+	}
+
+	for host, hostAliases := range allAliases {
+		if _, ok := servers[host]; !ok {
+			continue
+		}
+
+		uniqAliases := sets.NewString()
+		for _, alias := range hostAliases {
+			if alias == host {
+				continue
+			}
+
+			if _, ok := servers[alias]; ok {
+				continue
+			}
+
+			if uniqAliases.Has(alias) {
+				continue
+			}
+
+			uniqAliases.Insert(alias)
+		}
+
+		servers[host].Aliases = uniqAliases.List()
+	}
+
+	return servers
+}
+
+// TODO
+func (p *Provider) GetLocalSSLCert(name string) (*SSLCert, error) {
+	// TODO: implement or FIXME
+
+	return nil, nil
+}
+
+// TODO
+func (n *Provider) getDefaultSSLCertificate() *SSLCert {
+
+	// TODO: FIXME
+
+	// // read custom default SSL certificate, fall back to generated default certificate
+	// if n.cfg.DefaultSSLCertificate != "" {
+	// 	certificate, err := n.store.GetLocalSSLCert(n.cfg.DefaultSSLCertificate)
+	// 	if err == nil {
+	// 		return certificate
+	// 	}
+
+	// log.Warn().Msgf("Error loading custom default certificate, falling back to generated default:\n%v", err)
+	// }
+
+	// return n.cfg.FakeCertificate
+	return nil
+}
+
+// extractTLSSecretName returns the name of the Secret containing a SSL
+// certificate for the given host name, or an empty string.
+func extractTLSSecretName(host string, ing *Ingress,
+	getLocalSSLCert func(string) (*SSLCert, error),
+) string {
+	if ing == nil {
+		return ""
+	}
+
+	// naively return Secret name from TLS spec if host name matches
+	lowercaseHost := toLowerCaseASCII(host)
+	for _, tls := range ing.Spec.TLS {
+		for _, tlsHost := range tls.Hosts {
+			if toLowerCaseASCII(tlsHost) == lowercaseHost {
+				return tls.SecretName
+			}
+		}
+	}
+
+	// no TLS host matching host name, try each TLS host for matching SAN or CN
+	for _, tls := range ing.Spec.TLS {
+		if tls.SecretName == "" {
+			// There's no secretName specified, so it will never be available
+			continue
+		}
+
+		secrKey := fmt.Sprintf("%v/%v", ing.Namespace, tls.SecretName)
+
+		cert, err := getLocalSSLCert(secrKey)
+		if err != nil {
+			log.Warn().Msgf("Error getting SSL certificate %q: %v", secrKey, err)
+			continue
+		}
+
+		if cert == nil || cert.Certificate == nil {
+			continue
+		}
+
+		err = cert.Certificate.VerifyHostname(host)
+		if err != nil {
+			continue
+		}
+		log.Info().Msgf("Found SSL certificate matching host %q: %q", host, secrKey)
+		return tls.SecretName
+	}
+
+	return ""
+}
+
 // getServiceClusterEndpoint returns an Endpoint corresponding to the ClusterIP
 // field of a Service.
 func (p *Provider) getServiceClusterEndpoint(svcKey string, backend *netv1.IngressBackend) (endpoint Endpoint, err error) {
@@ -383,9 +736,9 @@ func (p *Provider) getDefaultUpstream() *Backend {
 func (p *Provider) getBackendServers(ingresses []*Ingress) ([]*Backend, []*Server) {
 	du := p.getDefaultUpstream()
 	upstreams := p.createUpstreams(ingresses, du)
-	// servers := createServers(ingresses, upstreams, du)
+	servers := p.createServers(ingresses, upstreams, du)
 	// var upstreams map[string]*Backend
-	var servers map[string]*Server
+	// var servers map[string]*Server
 
 	var canaryIngresses []*Ingress
 
