@@ -267,29 +267,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 		conf.HTTP.Services[defaultBackendName] = svc
 	}
 
-	var ingressClasses []*netv1.IngressClass
-	ics, err := p.k8sClient.ListIngressClasses()
-	if err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("Failed to list ingress classes")
-	}
-	ingressClasses = filterIngressClass(ics, p.IngressClassByName, p.IngressClass, p.ControllerClass)
-
-	rawIngresses := p.k8sClient.ListIngresses()
-
-	var ingresses []*Ingress
-	for _, ing := range rawIngresses {
-		if !p.shouldProcessIngress(ing, ingressClasses) {
-			continue
-		}
-
-		ingressConfig, err := parseIngressConfig(ing)
-		if err != nil {
-			log.Error().Err(err).Msg("Error parsing ingress configuration")
-			continue
-		}
-
-		ingresses = append(ingresses, &Ingress{Ingress: ing, ParsedAnnotations: &ingressConfig, ParsedAnnotationsNGINX: toAnnotations(&ingressConfig)})
-	}
+	ingresses := p.getIngresses(ctx)
 
 	// Get NGINX "configuration" from ingresses
 	hosts, servers, _ := p.getNginxConfiguration(ingresses)
@@ -572,6 +550,33 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 	}
 
 	return conf
+}
+
+func (p *Provider) getIngresses(ctx context.Context) []*Ingress {
+	var ingressClasses []*netv1.IngressClass
+	ics, err := p.k8sClient.ListIngressClasses()
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("Failed to list ingress classes")
+	}
+	ingressClasses = filterIngressClass(ics, p.IngressClassByName, p.IngressClass, p.ControllerClass)
+
+	rawIngresses := p.k8sClient.ListIngresses()
+
+	var ingresses []*Ingress
+	for _, ing := range rawIngresses {
+		if !p.shouldProcessIngress(ing, ingressClasses) {
+			continue
+		}
+
+		ingressConfig, err := parseIngressConfig(ing)
+		if err != nil {
+			log.Error().Err(err).Msg("Error parsing ingress configuration")
+			continue
+		}
+
+		ingresses = append(ingresses, &Ingress{Ingress: ing, ParsedAnnotations: &ingressConfig, ParsedAnnotationsNGINX: toAnnotations(&ingressConfig)})
+	}
+	return ingresses
 }
 
 func (p *Provider) buildServersTransport(namespace, name string, location Location) (*namedServersTransport, error) {

@@ -31,8 +31,10 @@ metadata:
 addressType: IPv4
 ports:
   - name: web
+    protocol: tcp
     port: 80
   - name: web2
+    protocol: tcp
     port: 8000
 endpoints:
   - addresses:
@@ -71,6 +73,7 @@ metadata:
 addressType: IPv4
 ports:
   - name: websecure
+    protocol: TCP
     port: 8443
 endpoints:
   - addresses:
