@@ -1,6 +1,8 @@
 package ingressnginx
 
 import (
+	"strings"
+
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/auth"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/authreq"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/ingress/annotations/authtls"
@@ -110,11 +112,15 @@ func toAnnotations(src *ingressConfig) *ParsedAnnotationsNGINX {
 			MatchCN:            "",
 			AuthTLSError:       "",
 		},
-		ClientBodyBufferSize:        "",
-		CustomHeaders:               customheaders.Config{},
-		ConfigurationSnippet:        "",
-		Connection:                  connection.Config{},
-		CorsConfig:                  cors.Config{},
+		ClientBodyBufferSize: "",
+		CustomHeaders:        customheaders.Config{},
+		ConfigurationSnippet: "",
+		Connection:           connection.Config{},
+		CorsConfig: cors.Config{
+			CorsEnabled:          ptr.Deref(src.EnableCORS, false),
+			CorsAllowCredentials: ptr.Deref(src.EnableCORSAllowCredentials, false),
+			CorsExposeHeaders:    strings.Join(ptr.Deref(src.CORSExposeHeaders, []string{}), ","),
+		},
 		CustomHTTPErrors:            []int{},
 		DisableProxyInterceptErrors: false,
 		DefaultBackend:              &corev1.Service{},
@@ -137,7 +143,7 @@ func toAnnotations(src *ingressConfig) *ParsedAnnotationsNGINX {
 		UsePortInRedirects:          false,
 		UpstreamHashBy:              upstreamhashby.Config{},
 		LoadBalancing:               "",
-		UpstreamVhost:               "",
+		UpstreamVhost:               ptr.Deref(src.UpstreamVhost, ""),
 		Denylist:                    ipdenylist.SourceRange{},
 		XForwardedPrefix:            "",
 		SSLCipher:                   sslcipher.Config{},
