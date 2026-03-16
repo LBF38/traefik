@@ -2023,6 +2023,15 @@ func (p *Provider) applyAuthTLSPassCertificateToUpstream(ingressNamespace string
 }
 
 func (p *Provider) applyRetry(routerName string, ingressConfig IngressConfig, rt *dynamic.Router, conf *dynamic.Configuration) {
+	disableRequestBuffering := !p.ProxyRequestBuffering
+	if ingressConfig.ProxyRequestBuffering != nil {
+		// Without value validation, lean on disabling by checking for "on", which is more likely to satisfy user input.
+		disableRequestBuffering = *ingressConfig.ProxyRequestBuffering != "on"
+	}
+	if disableRequestBuffering {
+		return
+	}
+
 	attempts := ptr.Deref(ingressConfig.ProxyNextUpstreamTries, p.ProxyNextUpstreamTries)
 	// Safeguard to deactivate retry when the value is less than 0.
 	if attempts < 0 {
@@ -2071,6 +2080,16 @@ func (p *Provider) applyRetry(routerName string, ingressConfig IngressConfig, rt
 	}
 	if len(statusCodes) > 0 {
 		retryConfig.Status = statusCodes
+
+		if proxyBodySize := ptr.Deref(ingressConfig.ProxyBodySize, ""); proxyBodySize != "" {
+			maxRequestBody, err := nginxSizeToBytes(proxyBodySize)
+			if err != nil {
+				log.Warn().Err(err).Msgf("retry middleware: proxy-body-size annotation has invalid value: %v", err)
+				maxRequestBody = dynamic.RetryDefaultMaxRequestBodyBytes
+			}
+
+			retryConfig.MaxRequestBodyBytes = &maxRequestBody
+		}
 	}
 
 	// Non-idempotent configuration.
