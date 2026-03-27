@@ -271,8 +271,20 @@ func (c connWithTimeouts) Write(b []byte) (n int, err error) {
 }
 
 func customDialContext(d *net.Dialer, cfg *dynamic.ForwardingTimeouts) func(ctx context.Context, network string, address string) (net.Conn, error) {
+	return customDialContextWithDialer(d, cfg)
+}
+
+type contextDialerWithTimeout interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+func customDialContextWithDialer[D contextDialerWithTimeout](d D, cfg *dynamic.ForwardingTimeouts) func(ctx context.Context, network string, address string) (net.Conn, error) {
 	return func(ctx context.Context, network, address string) (net.Conn, error) {
 		conn, err := d.DialContext(ctx, network, address)
+
+		if conn == nil {
+			return nil, err
+		}
 
 		if cfg.ReadTimeout <= 0 && cfg.WriteTimeout <= 0 {
 			return conn, err
