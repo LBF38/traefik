@@ -1,12 +1,30 @@
-package ingressnginxv2
+/*
+Copyright 2016 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package ingress
 
 import (
-	"strings"
+	apiv1 "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/auth"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/authreq"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/authtls"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/canary"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/connection"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/cors"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/customheaders"
@@ -22,137 +40,147 @@ import (
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/ratelimit"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/redirect"
 	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/rewrite"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/sessionaffinity"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/sslcipher"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/annotations/upstreamhashby"
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original_controller/controller/ingress/resolver"
-	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
-type Ingress struct {
-	*netv1.Ingress
-	ParsedAnnotations      *ingressConfig
-	ParsedAnnotationsNGINX *ParsedAnnotationsNGINX
+// TODO: The API shouldn't be importing structs from annotation code. Instead we probably want a conversion from internal
+// to API object, or see how much effort is to move the structs of annotations to become an "API'ish" as well
+
+// Configuration holds the definition of all the parts required to describe all
+// ingresses reachable by the ingress controller (using a filter by namespace)
+type Configuration struct {
+	// Backends are a list of backends used by all the Ingress rules in the
+	// ingress controller. This list includes the default backend
+	Backends []*Backend `json:"backends,omitempty"`
+	// Servers save the website config
+	Servers []*Server `json:"servers,omitempty"`
+	// TCPEndpoints contain endpoints for tcp streams handled by this backend
+	// +optional
+	TCPEndpoints []L4Service `json:"tcpEndpoints,omitempty"`
+	// UDPEndpoints contain endpoints for udp streams handled by this backend
+	// +optional
+	UDPEndpoints []L4Service `json:"udpEndpoints,omitempty"`
+	// PassthroughBackends contains the backends used for SSL passthrough.
+	// It contains information about the associated Server Name Indication (SNI).
+	// +optional
+	PassthroughBackends []*SSLPassthroughBackend `json:"passthroughBackends,omitempty"`
+
+	// BackendConfigChecksum contains the particular checksum of a Configuration object
+	BackendConfigChecksum string `json:"BackendConfigChecksum,omitempty"`
+
+	// ConfigurationChecksum contains the particular checksum of a Configuration object
+	ConfigurationChecksum string `json:"configurationChecksum,omitempty"`
+
+	DefaultSSLCertificate *SSLCert `json:"-"`
+
+	StreamSnippets []string `json:"StreamSnippets"`
 }
 
-// Ingress defines the valid annotations present in one NGINX Ingress rule
-type ParsedAnnotationsNGINX struct {
-	BackendProtocol             string
-	Aliases                     []string
-	BasicDigestAuth             auth.Config
-	Canary                      canary.Config
-	CertificateAuth             authtls.Config
-	ClientBodyBufferSize        string
-	CustomHeaders               customheaders.Config
-	ConfigurationSnippet        string
-	Connection                  connection.Config
-	CorsConfig                  cors.Config
-	CustomHTTPErrors            []int
-	DisableProxyInterceptErrors bool
-	DefaultBackend              *corev1.Service
-	FastCGI                     fastcgi.Config
-	Denied                      *string
-	ExternalAuth                authreq.Config
-	EnableGlobalAuth            bool
-	HTTP2PushPreload            bool
-	Opentelemetry               opentelemetry.Config
-	Proxy                       proxy.Config
-	ProxySSL                    proxyssl.Config
-	RateLimit                   ratelimit.Config
-	Redirect                    redirect.Config
-	Rewrite                     rewrite.Config
-	Satisfy                     string
-	ServerSnippet               string
-	ServiceUpstream             bool
-	SessionAffinity             sessionaffinity.Config
-	SSLPassthrough              bool
-	UsePortInRedirects          bool
-	UpstreamHashBy              upstreamhashby.Config
-	LoadBalancing               string
-	UpstreamVhost               string
-	Denylist                    ipdenylist.SourceRange
-	XForwardedPrefix            string
-	SSLCipher                   sslcipher.Config
-	Logs                        log.Config
-	ModSecurity                 modsecurity.Config
-	Mirror                      mirror.Config
-	StreamSnippet               string
-	Allowlist                   ipallowlist.SourceRange
+// Backend describes one or more remote server/s (endpoints) associated with a service
+// +k8s:deepcopy-gen=true
+type Backend struct {
+	// Name represents an unique apiv1.Service name formatted as <namespace>-<name>-<port>
+	Name    string             `json:"name"`
+	Service *apiv1.Service     `json:"service,omitempty"`
+	Port    intstr.IntOrString `json:"port"`
+	// SSLPassthrough indicates that Ingress controller will delegate TLS termination to the endpoints.
+	SSLPassthrough bool `json:"sslPassthrough"`
+	// Endpoints contains the list of endpoints currently running
+	Endpoints []Endpoint `json:"endpoints,omitempty"`
+	// StickySessionAffinitySession contains the StickyConfig object with stickiness configuration
+	SessionAffinity SessionAffinityConfig `json:"sessionAffinityConfig"`
+	// Consistent hashing by NGINX variable
+	UpstreamHashBy UpstreamHashByConfig `json:"upstreamHashByConfig,omitempty"`
+	// LB algorithm configuration per ingress
+	LoadBalancing string `json:"load-balance,omitempty"`
+	// Denotes if a backend has no server. The backend instead shares a server with another backend and acts as an
+	// alternative backend.
+	// This can be used to share multiple upstreams in the sam nginx server block.
+	NoServer bool `json:"noServer"`
+	// Policies to describe the characteristics of an alternative backend.
+	// +optional
+	TrafficShapingPolicy TrafficShapingPolicy `json:"trafficShapingPolicy,omitempty"`
+	// Contains a list of backends without servers that are associated with this backend.
+	// +optional
+	AlternativeBackends []string `json:"alternativeBackends,omitempty"`
 }
 
-func toAnnotations(src *ingressConfig) *ParsedAnnotationsNGINX {
-	// TODO: finish mapping
-	return &ParsedAnnotationsNGINX{
-		BackendProtocol: "",
-		Aliases:         []string{},
-		BasicDigestAuth: auth.Config{
-			Type:       ptr.Deref(src.AuthType, ""),
-			Realm:      ptr.Deref(src.AuthRealm, ""),
-			Secret:     ptr.Deref(src.AuthSecret, ""),
-			SecretType: ptr.Deref(src.AuthSecretType, ""),
-		},
-		Canary: canary.Config{
-			Enabled:       ptr.Deref(src.Canary, false),
-			Weight:        ptr.Deref(src.CanaryWeight, 0),
-			WeightTotal:   ptr.Deref(src.CanaryWeightTotal, 100),
-			Header:        ptr.Deref(src.CanaryByHeader, ""),
-			HeaderValue:   ptr.Deref(src.CanaryByHeaderValue, ""),
-			HeaderPattern: ptr.Deref(src.CanaryByHeaderPattern, ""),
-			Cookie:        ptr.Deref(src.CanaryByCookie, ""),
-		},
-		CertificateAuth: authtls.Config{
-			AuthSSLCert:        resolver.AuthSSLCert{},
-			VerifyClient:       ptr.Deref(src.AuthTLSVerifyClient, ""),
-			ValidationDepth:    0,
-			ErrorPage:          "",
-			PassCertToUpstream: false,
-			MatchCN:            "",
-			AuthTLSError:       "",
-		},
-		ClientBodyBufferSize: "",
-		CustomHeaders:        customheaders.Config{},
-		ConfigurationSnippet: "",
-		Connection:           connection.Config{},
-		CorsConfig: cors.Config{
-			CorsEnabled:          ptr.Deref(src.EnableCORS, false),
-			CorsAllowCredentials: ptr.Deref(src.EnableCORSAllowCredentials, false),
-			CorsExposeHeaders:    strings.Join(ptr.Deref(src.CORSExposeHeaders, []string{}), ","),
-		},
-		CustomHTTPErrors:            []int{},
-		DisableProxyInterceptErrors: false,
-		DefaultBackend:              &corev1.Service{},
-		FastCGI:                     fastcgi.Config{},
-		Denied:                      new(string),
-		ExternalAuth:                authreq.Config{},
-		EnableGlobalAuth:            false,
-		HTTP2PushPreload:            false,
-		Opentelemetry:               opentelemetry.Config{},
-		Proxy:                       proxy.Config{},
-		ProxySSL:                    proxyssl.Config{},
-		RateLimit:                   ratelimit.Config{},
-		Redirect:                    redirect.Config{},
-		Rewrite:                     rewrite.Config{},
-		Satisfy:                     "",
-		ServerSnippet:               "",
-		ServiceUpstream:             false,
-		SessionAffinity:             sessionaffinity.Config{},
-		SSLPassthrough:              false,
-		UsePortInRedirects:          false,
-		UpstreamHashBy:              upstreamhashby.Config{},
-		LoadBalancing:               "",
-		UpstreamVhost:               ptr.Deref(src.UpstreamVhost, ""),
-		Denylist:                    ipdenylist.SourceRange{},
-		XForwardedPrefix:            "",
-		SSLCipher:                   sslcipher.Config{},
-		Logs:                        log.Config{},
-		ModSecurity:                 modsecurity.Config{},
-		Mirror:                      mirror.Config{},
-		StreamSnippet:               "",
-		Allowlist:                   ipallowlist.SourceRange{},
+// TrafficShapingPolicy describes the policies to put in place when a backend has no server and is used as an
+// alternative backend
+// +k8s:deepcopy-gen=true
+type TrafficShapingPolicy struct {
+	// Weight (0-<WeightTotal>) of traffic to redirect to the backend.
+	// e.g. <WeightTotal> defaults to 100, weight 20 means 20% of traffic will be
+	// redirected to the backend and 80% will remain with the other backend. If
+	// <WeightTotal> is set to 1000, weight 2 means 0.2% of traffic will be
+	// redirected to the backend and 99.8% will remain with the other backend.
+	// 0 weight will not send any traffic to this backend
+	Weight int `json:"weight"`
+	// The total weight of traffic (>= 100). If unspecified, it defaults to 100.
+	WeightTotal int `json:"weightTotal"`
+	// Header on which to redirect requests to this backend
+	Header string `json:"header"`
+	// HeaderValue on which to redirect requests to this backend
+	HeaderValue string `json:"headerValue"`
+	// HeaderPattern the header value match pattern, support exact, regex.
+	HeaderPattern string `json:"headerPattern"`
+	// Cookie on which to redirect requests to this backend
+	Cookie string `json:"cookie"`
+}
+
+// HashInclude defines if a field should be used or not to calculate the hash
+func (b *Backend) HashInclude(field string, _ interface{}) (bool, error) {
+	switch field {
+	case "Endpoints":
+		return false, nil
+	default:
+		return true, nil
 	}
+}
+
+// SessionAffinityConfig describes different affinity configurations for new sessions.
+// Once a session is mapped to a backend based on some affinity setting, it
+// retains that mapping till the backend goes down, or the ingress controller
+// restarts. Exactly one of these values will be set on the upstream, since multiple
+// affinity values are incompatible. Once set, the backend makes no guarantees
+// about honoring updates.
+// +k8s:deepcopy-gen=true
+type SessionAffinityConfig struct {
+	AffinityType          string                `json:"name"`
+	AffinityMode          string                `json:"mode"`
+	CookieSessionAffinity CookieSessionAffinity `json:"cookieSessionAffinity"`
+}
+
+// CookieSessionAffinity defines the structure used in Affinity configured by Cookies.
+// +k8s:deepcopy-gen=true
+type CookieSessionAffinity struct {
+	Name                    string              `json:"name"`
+	Expires                 string              `json:"expires,omitempty"`
+	MaxAge                  string              `json:"maxage,omitempty"`
+	Locations               map[string][]string `json:"locations,omitempty"`
+	Secure                  bool                `json:"secure,omitempty"`
+	Path                    string              `json:"path,omitempty"`
+	Domain                  string              `json:"domain,omitempty"`
+	SameSite                string              `json:"samesite,omitempty"`
+	ConditionalSameSiteNone bool                `json:"conditional_samesite_none,omitempty"`
+	ChangeOnFailure         bool                `json:"change_on_failure,omitempty"`
+}
+
+// UpstreamHashByConfig described setting from the upstream-hash-by* annotations.
+type UpstreamHashByConfig struct {
+	UpstreamHashBy           string `json:"upstream-hash-by,omitempty"`
+	UpstreamHashBySubset     bool   `json:"upstream-hash-by-subset,omitempty"`
+	UpstreamHashBySubsetSize int    `json:"upstream-hash-by-subset-size,omitempty"`
+}
+
+// Endpoint describes a kubernetes endpoint in a backend
+// +k8s:deepcopy-gen=true
+type Endpoint struct {
+	// Address IP address of the endpoint
+	Address string `json:"address"`
+	// Port number of the TCP port
+	Port string `json:"port"`
+	// Target returns a reference to the object providing the endpoint
+	Target *apiv1.ObjectReference `json:"target,omitempty"`
 }
 
 // Server describes a website
@@ -210,7 +238,7 @@ type Location struct {
 	// traffic to the backend.
 	Path string `json:"path"`
 	// PathType represents the type of path referred to by a HTTPIngressPath.
-	PathType *netv1.PathType `json:"pathType"`
+	PathType *networking.PathType `json:"pathType"`
 	// IsDefBackend indicates if service specified in the Ingress
 	// contains active endpoints or not. Returning true means the location
 	// uses the default backend.
@@ -222,7 +250,7 @@ type Location struct {
 	// Backend describes the name of the backend to use.
 	Backend string `json:"backend"`
 	// Service describes the referenced services from the ingress
-	Service *corev1.Service `json:"-"`
+	Service *apiv1.Service `json:"-"`
 	// Port describes to which port from the service
 	Port intstr.IntOrString `json:"port"`
 	// Overwrite the Host header passed into the backend. Defaults to
@@ -294,7 +322,7 @@ type Location struct {
 	ClientBodyBufferSize string `json:"clientBodyBufferSize,omitempty"`
 	// DefaultBackend allows the use of a custom default backend for this location.
 	// +optional
-	DefaultBackend *corev1.Service `json:"-"`
+	DefaultBackend *apiv1.Service `json:"-"`
 	// DefaultBackendUpstreamName is the upstream-formatted string for the name of
 	// this location's custom default backend
 	DefaultBackendUpstreamName string `json:"defaultBackendUpstreamName,omitempty"`
@@ -332,120 +360,52 @@ type Location struct {
 	Opentelemetry opentelemetry.Config `json:"opentelemetry"`
 }
 
-// TODO
-type NginxConfiguration struct {
-	Backends            []*Backend
-	Servers             []*Server
-	PassthroughBackends []*SSLPassthroughBackend
-}
-
-// Backend describes one or more remote server/s (endpoints) associated with a service
-// +k8s:deepcopy-gen=true
-type Backend struct {
-	// Name represents an unique apiv1.Service name formatted as <namespace>-<name>-<port>
-	Name    string             `json:"name"`
-	Service *corev1.Service    `json:"service,omitempty"`
-	Port    intstr.IntOrString `json:"port"`
-	// SSLPassthrough indicates that Ingress controller will delegate TLS termination to the endpoints.
-	SSLPassthrough bool `json:"sslPassthrough"`
-	// Endpoints contains the list of endpoints currently running
-	Endpoints []Endpoint `json:"endpoints,omitempty"`
-	// StickySessionAffinitySession contains the StickyConfig object with stickiness configuration
-	SessionAffinity SessionAffinityConfig `json:"sessionAffinityConfig"`
-	// Consistent hashing by NGINX variable
-	UpstreamHashBy UpstreamHashByConfig `json:"upstreamHashByConfig"`
-	// LB algorithm configuration per ingress
-	LoadBalancing string `json:"load-balance,omitempty"`
-	// Denotes if a backend has no server. The backend instead shares a server with another backend and acts as an
-	// alternative backend.
-	// This can be used to share multiple upstreams in the sam nginx server block.
-	NoServer bool `json:"noServer"`
-	// Policies to describe the characteristics of an alternative backend.
-	// +optional
-	TrafficShapingPolicy TrafficShapingPolicy `json:"trafficShapingPolicy"`
-	// Contains a list of backends without servers that are associated with this backend.
-	// +optional
-	AlternativeBackends []string `json:"alternativeBackends,omitempty"`
-}
-
-// UpstreamHashByConfig described setting from the upstream-hash-by* annotations.
-type UpstreamHashByConfig struct {
-	UpstreamHashBy           string `json:"upstream-hash-by,omitempty"`
-	UpstreamHashBySubset     bool   `json:"upstream-hash-by-subset,omitempty"`
-	UpstreamHashBySubsetSize int    `json:"upstream-hash-by-subset-size,omitempty"`
-}
-
-// Endpoint describes a kubernetes endpoint in a backend
-// +k8s:deepcopy-gen=true
-type Endpoint struct {
-	// Address IP address of the endpoint
-	Address string `json:"address"`
-	// Port number of the TCP port
-	Port string `json:"port"`
-	// Target returns a reference to the object providing the endpoint
-	Target *corev1.ObjectReference `json:"target,omitempty"`
-}
-
-// TrafficShapingPolicy describes the policies to put in place when a backend has no server and is used as an
-// alternative backend
-// +k8s:deepcopy-gen=true
-type TrafficShapingPolicy struct {
-	// Weight (0-<WeightTotal>) of traffic to redirect to the backend.
-	// e.g. <WeightTotal> defaults to 100, weight 20 means 20% of traffic will be
-	// redirected to the backend and 80% will remain with the other backend. If
-	// <WeightTotal> is set to 1000, weight 2 means 0.2% of traffic will be
-	// redirected to the backend and 99.8% will remain with the other backend.
-	// 0 weight will not send any traffic to this backend
-	Weight int `json:"weight"`
-	// The total weight of traffic (>= 100). If unspecified, it defaults to 100.
-	WeightTotal int `json:"weightTotal"`
-	// Header on which to redirect requests to this backend
-	Header string `json:"header"`
-	// HeaderValue on which to redirect requests to this backend
-	HeaderValue string `json:"headerValue"`
-	// HeaderPattern the header value match pattern, support exact, regex.
-	HeaderPattern string `json:"headerPattern"`
-	// Cookie on which to redirect requests to this backend
-	Cookie string `json:"cookie"`
-}
-
-// SessionAffinityConfig describes different affinity configurations for new sessions.
-// Once a session is mapped to a backend based on some affinity setting, it
-// retains that mapping till the backend goes down, or the ingress controller
-// restarts. Exactly one of these values will be set on the upstream, since multiple
-// affinity values are incompatible. Once set, the backend makes no guarantees
-// about honoring updates.
-// +k8s:deepcopy-gen=true
-type SessionAffinityConfig struct {
-	AffinityType          string                `json:"name"`
-	AffinityMode          string                `json:"mode"`
-	CookieSessionAffinity CookieSessionAffinity `json:"cookieSessionAffinity"`
-}
-
-// CookieSessionAffinity defines the structure used in Affinity configured by Cookies.
-// +k8s:deepcopy-gen=true
-type CookieSessionAffinity struct {
-	Name                    string              `json:"name"`
-	Expires                 string              `json:"expires,omitempty"`
-	MaxAge                  string              `json:"maxage,omitempty"`
-	Locations               map[string][]string `json:"locations,omitempty"`
-	Secure                  bool                `json:"secure,omitempty"`
-	Path                    string              `json:"path,omitempty"`
-	Domain                  string              `json:"domain,omitempty"`
-	SameSite                string              `json:"samesite,omitempty"`
-	ConditionalSameSiteNone bool                `json:"conditional_samesite_none,omitempty"`
-	ChangeOnFailure         bool                `json:"change_on_failure,omitempty"`
-}
-
 // SSLPassthroughBackend describes a SSL upstream server configured
 // as passthrough (no TLS termination in the ingress controller)
 // The endpoints must provide the TLS termination exposing the required SSL certificate.
 // The ingress controller only pipes the underlying TCP connection
 type SSLPassthroughBackend struct {
-	Service *corev1.Service    `json:"-"`
+	Service *apiv1.Service     `json:"-"`
 	Port    intstr.IntOrString `json:"port"`
 	// Backend describes the endpoints to use.
 	Backend string `json:"namespace,omitempty"`
 	// Hostname returns the FQDN of the server
 	Hostname string `json:"hostname"`
 }
+
+// L4Service describes a L4 Ingress service.
+type L4Service struct {
+	// Port external port to expose
+	Port int `json:"port"`
+	// Backend of the service
+	Backend L4Backend `json:"backend"`
+	// Endpoints active endpoints of the service
+	Endpoints []Endpoint `json:"endpoints,omitempty"`
+	// k8s Service
+	Service *apiv1.Service `json:"-"`
+}
+
+// L4Backend describes the kubernetes service behind L4 Ingress service
+type L4Backend struct {
+	Port      intstr.IntOrString `json:"port"`
+	Name      string             `json:"name"`
+	Namespace string             `json:"namespace"`
+	Protocol  apiv1.Protocol     `json:"protocol"`
+	// +optional
+	ProxyProtocol ProxyProtocol `json:"proxyProtocol"`
+}
+
+// ProxyProtocol describes the proxy protocol configuration
+type ProxyProtocol struct {
+	Decode bool `json:"decode"`
+	Encode bool `json:"encode"`
+}
+
+// Ingress holds the definition of an Ingress plus its annotations
+type Ingress struct {
+	networking.Ingress `json:"-"`
+	ParsedAnnotations  *annotations.Ingress `json:"parsedAnnotations"`
+}
+
+// GeneralConfig holds the definition of lua general configuration data
+type GeneralConfig struct{}
