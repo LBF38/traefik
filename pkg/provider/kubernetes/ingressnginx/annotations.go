@@ -1,4 +1,4 @@
-package ingressnginx
+package ingressnginxv2
 
 import (
 	"errors"

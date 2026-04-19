@@ -1,4 +1,4 @@
-package ingressnginx
+package ingressnginxv2
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	providerName = "kubernetesingressnginx"
+	providerName = "kubernetesingressnginxv2"
 
 	annotationIngressClass = "kubernetes.io/ingress.class"
 

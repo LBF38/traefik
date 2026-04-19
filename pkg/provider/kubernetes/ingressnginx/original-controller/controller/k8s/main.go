@@ -137,7 +137,7 @@ func MetaNamespaceKey(obj interface{}) string {
 
 // IngressNGINXController defines the valid value of IngressClass
 // Controller field for ingress-nginx
-const IngressNGINXController = "github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingress-nginx/original-controller"
+const IngressNGINXController = "ingress-nginx"
 
 // NetworkingIngressAvailable checks if the package "k8s.io/api/networking/v1"
 // is available or not and if Ingress V1 is supported (k8s >= v1.19.0)

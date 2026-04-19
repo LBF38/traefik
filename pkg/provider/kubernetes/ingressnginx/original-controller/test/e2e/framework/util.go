@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
+	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/k8s"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -33,8 +34,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-
-	"github.com/traefik/traefik/v3/pkg/provider/kubernetes/ingressnginx/original-controller/controller/k8s"
 )
 
 const (

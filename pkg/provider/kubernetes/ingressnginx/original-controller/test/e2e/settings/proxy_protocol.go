@@ -191,7 +191,7 @@ var _ = framework.DescribeSetting("use-proxy-protocol", func() {
 			CoreV1().
 			Services(f.Namespace).
 			Get(context.TODO(), "nginx-ingress-controller", metav1.GetOptions{})
-		assert.Nil(ginkgo.GinkgoT(), err, "unexpected error obtaining ingressnginx service")
+		assert.Nil(ginkgo.GinkgoT(), err, "unexpected error obtaining ingress-nginx service")
 		assert.NotNil(ginkgo.GinkgoT(), svc, "expected a service but none returned")
 
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{

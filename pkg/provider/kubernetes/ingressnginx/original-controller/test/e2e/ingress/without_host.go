@@ -93,7 +93,7 @@ var _ = framework.IngressNginxDescribe("[Ingress] definition without host", func
 			WithHeader("Host", "only-backend").
 			Expect().
 			Status(http.StatusOK)
-		// Following assertion added with respect to issue https://github.com/kubernetes/ingressnginx/issues/8823
+		// Following assertion added with respect to issue https://github.com/kubernetes/ingress-nginx/issues/8823
 		// This check ensure that ingress having defaultBackend with rules should only be added as default backend
 		// for the host mentioned in rule. It should not affect the default catch-all server_name _ block.
 		f.HTTPTestClient().
